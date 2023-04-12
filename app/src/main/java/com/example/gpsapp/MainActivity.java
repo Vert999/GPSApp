@@ -47,10 +47,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        // Activity objects go here
         AddressText = findViewById(R.id.result);
         LocationButton = findViewById(R.id.getIt);
-
+        //Other variables go here
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(5000);
@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
-
+    // asks for permission before using
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -102,12 +102,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void getCurrentLocation() {
 
-
+    //checks if build version is right
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
                 if (isGPSEnabled()) {
-
+                    // the call that starts the whole thing
                     LocationServices.getFusedLocationProviderClient(MainActivity.this)
                             .requestLocationUpdates(locationRequest, new LocationCallback() {
                                 @Override
@@ -116,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
 
                                     LocationServices.getFusedLocationProviderClient(MainActivity.this)
                                             .removeLocationUpdates(this);
-
+                                // checks if location si null, if it is then somethin went wrong
                                     if (locationResult != null && locationResult.getLocations().size() >0){
 
                                         int index = locationResult.getLocations().size() - 1;
