@@ -12,6 +12,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -41,6 +43,7 @@ import android.Manifest;
 
 import org.w3c.dom.Text;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 public class MainActivity extends AppCompatActivity {
@@ -141,6 +144,13 @@ public class MainActivity extends AppCompatActivity {
         // update the whole UI to show new values
         lati.setText(String.valueOf(location.getLatitude()));
         logn.setText(String.valueOf(location.getLongitude()));
-        /*AddressText.setText(location.);*/
+        Geocoder geocoder = new Geocoder(this);
+        try{
+            List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+            AddressText.setText(addresses.get(0).getAddressLine(0));
+        }
+        catch(Exception e){
+            AddressText.setText("Unable to get Address");
+        }
     }
 }
