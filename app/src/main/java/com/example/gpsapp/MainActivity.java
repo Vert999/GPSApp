@@ -20,11 +20,13 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -33,164 +35,116 @@ import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import android.Manifest;
+
+import org.w3c.dom.Text;
+
 import java.util.function.Consumer;
 
 public class MainActivity extends AppCompatActivity {
+    private static final int PERMISSIONS_FINE_LOCATION = 99; // this can be any arbitrary number that you want
     private TextView AddressText;
     private Button LocationButton;
-    private LocationRequest locationRequest;
+    private TextView lati;
+    private TextView logn;
+    private Switch locationUpdate;
+    private Switch sgps;
+    private TextView lblGPS;
 
+    private LocationRequest locationRequest; // location request is a config file for settings related to fuzedproviderclient
 
+    FusedLocationProviderClient flpc; // Google's API for location services
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         // Activity objects go here
-        AddressText = findViewById(R.id.result);
+        AddressText = findViewById(R.id.address_text);
         LocationButton = findViewById(R.id.getIt);
+        lati = findViewById(R.id.lat_text);
+        logn = findViewById(R.id.lon_text);
+        locationUpdate = findViewById(R.id.slocationsupdates);
+        sgps = findViewById(R.id.sgps);
+        lblGPS = findViewById(R.id.labelgp);
         //Other variables go here
         locationRequest = LocationRequest.create();
+        // priority is the accuracy of the location
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(5000);
-        locationRequest.setFastestInterval(2000);
+        // Interval is how often does it check for updates, fastest is the best case scenario
+        locationRequest.setInterval(30000);
+        locationRequest.setFastestInterval(5000);
 
+        sgps.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (sgps.isChecked()) // checked is high accuracy
+                {
+                    locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+                    lblGPS.setText("Using GPS Sensors");
+                }
+                else
+                {
+                    locationRequest.setPriority(LocationRequest.PRIORITY_LOW_POWER);
+                    lblGPS.setText("Using Towers + WIFI");
+                }
+            }
+        });
         LocationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                getCurrentLocation();
+                updateGPS();
             }
         });
 
 
+
     }
-    // asks for permission before using
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (requestCode == 1){
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED){
+        switch (requestCode) {
+            case PERMISSIONS_FINE_LOCATION:
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            {
+                updateGPS();
+            }
+            else {
+                Toast.makeText(this, "This app requires that you grant permission to work properly", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+            break;
+        }
+    }
 
-                if (isGPSEnabled()) {
-
-                    getCurrentLocation();
-
-                }else {
-
-                    turnOnGPS();
+    private void updateGPS(){
+        // get permissions to track GPS, current location from fused client, and updates the UI
+        flpc = LocationServices.getFusedLocationProviderClient(MainActivity.this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+        {
+            flpc.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                @Override
+                public void onSuccess(Location location) {
+                    //after permission is granted, the location is found and the values are put into the UI
+                    updateUI(location);
                 }
-            }
+            });
+            
         }
-
-
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == 2) {
-            if (resultCode == Activity.RESULT_OK) {
-
-                getCurrentLocation();
+        else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+                requestPermissions(new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_FINE_LOCATION);
             }
         }
     }
-
-    private void getCurrentLocation() {
-
-    //checks if build version is right
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
-                if (isGPSEnabled()) {
-                    // the call that starts the whole thing
-                    LocationServices.getFusedLocationProviderClient(MainActivity.this)
-                            .requestLocationUpdates(locationRequest, new LocationCallback() {
-                                @Override
-                                public void onLocationResult(@NonNull LocationResult locationResult) {
-                                    super.onLocationResult(locationResult);
-
-                                    LocationServices.getFusedLocationProviderClient(MainActivity.this)
-                                            .removeLocationUpdates(this);
-                                // checks if location si null, if it is then somethin went wrong
-                                    if (locationResult != null && locationResult.getLocations().size() >0){
-
-                                        int index = locationResult.getLocations().size() - 1;
-                                        double latitude = locationResult.getLocations().get(index).getLatitude();
-                                        double longitude = locationResult.getLocations().get(index).getLongitude();
-
-                                        AddressText.setText("Latitude: "+ latitude + "\n" + "Longitude: "+ longitude);
-                                    }
-                                }
-                            }, Looper.getMainLooper());
-
-                } else {
-                    turnOnGPS();
-                }
-
-            } else {
-                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-            }
-        }
-    }
-
-    private void turnOnGPS() {
-
-
-
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-                .addLocationRequest(locationRequest);
-        builder.setAlwaysShow(true);
-
-        Task<LocationSettingsResponse> result = LocationServices.getSettingsClient(getApplicationContext())
-                .checkLocationSettings(builder.build());
-
-        result.addOnCompleteListener(new OnCompleteListener<LocationSettingsResponse>() {
-            @Override
-            public void onComplete(@NonNull Task<LocationSettingsResponse> task) {
-
-                try {
-                    LocationSettingsResponse response = task.getResult(ApiException.class);
-                    Toast.makeText(MainActivity.this, "GPS is already tured on", Toast.LENGTH_SHORT).show();
-
-                } catch (ApiException e) {
-
-                    switch (e.getStatusCode()) {
-                        case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-
-                            try {
-                                ResolvableApiException resolvableApiException = (ResolvableApiException) e;
-                                resolvableApiException.startResolutionForResult(MainActivity.this, 2);
-                            } catch (IntentSender.SendIntentException ex) {
-                                ex.printStackTrace();
-                            }
-                            break;
-
-                        case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                            //Device does not have location
-                            break;
-                    }
-                }
-            }
-        });
-
-    }
-
-    private boolean isGPSEnabled() {
-        LocationManager locationManager = null;
-        boolean isEnabled = false;
-
-        if (locationManager == null) {
-            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        }
-
-        isEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        return isEnabled;
-
+    private void updateUI(Location location)
+    {
+        // update the whole UI to show new values
+        lati.setText(String.valueOf(location.getLatitude()));
+        logn.setText(String.valueOf(location.getLongitude()));
+        /*AddressText.setText(location.);*/
     }
 }
-
