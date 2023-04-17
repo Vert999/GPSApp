@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         // Activity objects go here
         AddressText = findViewById(R.id.address_text);
-        LocationButton = findViewById(R.id.getIt);
+//        LocationButton = findViewById(R.id.getIt);
         lati = findViewById(R.id.lat_text);
         logn = findViewById(R.id.lon_text);
         locationUpdate = findViewById(R.id.slocationsupdates);
@@ -89,14 +89,10 @@ public class MainActivity extends AppCompatActivity {
                     locationRequest.setPriority(LocationRequest.PRIORITY_LOW_POWER);
                     lblGPS.setText("Using Towers + WIFI");
                 }
-            }
-        });
-        LocationButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
                 updateGPS();
             }
         });
+
 
 
 
